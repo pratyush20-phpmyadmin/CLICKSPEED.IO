@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CPS Speed Test - Terra Arcade</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Outfit:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            pixel: ['VT323', 'monospace'],
+            sans: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            terraDark: '#080d09',
+            terraCard: '#111c13',
+            terraGreen: '#059669',
+            terraGold: '#d97706',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .pixel-border {
+      border: 4px solid #1c3321;
+      box-shadow: inset -4px -4px 0px 0px #09130b, inset 4px 4px 0px 0px #2a4c32;
+    }
+    .click-area {
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .click-area:active {
+      transform: scale(0.98);
+    }
+    @keyframes ripple {
+      0% { transform: scale(0); opacity: 0.8; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+    .ripple-effect {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.4);
+      pointer-events: none;
+      animation: ripple 0.4s linear forwards;
+    }
+  </style>
+</head>
+<body class="bg-terraDark text-slate-100 min-h-screen flex flex-col font-pixel select-none overflow-x-hidden">
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between bg-terraCard/90 border-b-2 border-emerald-900/50 sticky top-0 z-40">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 bg-emerald-600 rounded flex items-center justify-center text-white font-black text-xl">⚡</div>
+      <h1 class="text-3xl tracking-widest text-white">CPS <span class="text-emerald-400">TESTER</span></h1>
+    </div>
+    <div class="text-xl text-amber-400 flex items-center gap-2 font-bold">
+      <i class="fa-solid fa-trophy"></i>
+      <span id="top-score-display">Peak CPS: 0.0</span>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col items-center justify-center gap-6">
+
+    <!-- Timer Mode Selection -->
+    <div class="w-full bg-terraCard p-3 rounded-xl border border-emerald-900 flex flex-col items-center gap-2">
+      <span class="text-xl text-emerald-400 tracking-wide">SELECT DURATION:</span>
+      <div class="flex flex-wrap justify-center gap-2 w-full">
+        <button onclick="setDuration(1)" class="time-btn bg-emerald-600 text-white text-xl px-4 py-1.5 rounded border border-emerald-500 font-bold hover:bg-emerald-500 active:scale-95">1s</button>
+        <button onclick="setDuration(5)" class="time-btn bg-slate-800 text-slate-300 text-xl px-4 py-1.5 rounded border border-slate-700 font-bold hover:bg-slate-700 active:scale-95">5s</button>
+        <button onclick="setDuration(10)" class="time-btn bg-slate-800 text-slate-300 text-xl px-4 py-1.5 rounded border border-slate-700 font-bold hover:bg-slate-700 active:scale-95">10s</button>
+        <button onclick="setDuration(30)" class="time-btn bg-slate-800 text-slate-300 text-xl px-4 py-1.5 rounded border border-slate-700 font-bold hover:bg-slate-700 active:scale-95">30s</button>
+        <button onclick="setDuration(60)" class="time-btn bg-slate-800 text-slate-300 text-xl px-4 py-1.5 rounded border border-slate-700 font-bold hover:bg-slate-700 active:scale-95">60s</button>
+      </div>
+    </div>
+
+    <!-- Live Stats Dashboard -->
+    <div class="grid grid-cols-3 gap-3 w-full text-center">
+      <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+        <div class="text-slate-400 text-lg">TIME LEFT</div>
+        <div id="time-display" class="text-3xl text-sky-400 font-bold">5.0s</div>
+      </div>
+      <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+        <div class="text-slate-400 text-lg">CLICKS</div>
+        <div id="clicks-display" class="text-3xl text-emerald-400 font-bold">0</div>
+      </div>
+      <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+        <div class="text-slate-400 text-lg">SPEED (CPS)</div>
+        <div id="cps-display" class="text-3xl text-amber-400 font-bold">0.0</div>
+      </div>
+    </div>
+
+    <!-- Main Interactive Click Pad -->
+    <div id="click-pad" class="click-area relative w-full h-64 sm:h-80 bg-slate-900 hover:bg-slate-800/80 border-4 border-emerald-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all duration-100 shadow-2xl">
+      <div id="pad-icon" class="text-6xl mb-2">⚡</div>
+      <div id="pad-text" class="text-3xl font-bold text-center text-emerald-400 px-4">CLICK TO START</div>
+      <div id="pad-subtext" class="text-xl text-slate-400 mt-1">Click as fast as you can!</div>
+    </div>
+
+    <!-- Results Modal Card -->
+    <div id="result-card" class="hidden w-full bg-terraCard p-6 rounded-2xl border-2 border-amber-500/60 flex flex-col items-center text-center gap-3">
+      <div id="rank-badge" class="text-5xl">⚡</div>
+      <h2 id="result-rank" class="text-4xl text-amber-400 font-bold">SPEED DEMON!</h2>
+      <p id="result-summary" class="text-2xl text-slate-200">You scored <span class="text-emerald-400 font-bold">0 Clicks</span> in <span class="text-sky-400 font-bold">5s</span> (<span class="text-amber-400 font-bold">0.0 CPS</span>)</p>
+      <button onclick="resetTest()" class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-bold px-8 py-2 rounded-xl border-b-4 border-emerald-800 transition active:scale-95">
+        TRY AGAIN 🔄
+      </button>
+    </div>
+
+  </main>
+
+  <script>
+    // App State
+    let selectedDuration = 5;
+    let timeLeft = 5;
+    let clickCount = 0;
+    let isRunning = false;
+    let isFinished = false;
+    let timer = null;
+    let peakCPS = 0;
+
+    const timeDisplay = document.getElementById('time-display');
+    const clicksDisplay = document.getElementById('clicks-display');
+    const cpsDisplay = document.getElementById('cps-display');
+    const clickPad = document.getElementById('click-pad');
+    const padText = document.getElementById('pad-text');
+    const padSubtext = document.getElementById('pad-subtext');
+    const padIcon = document.getElementById('pad-icon');
+    const resultCard = document.getElementById('result-card');
+    const topScoreDisplay = document.getElementById('top-score-display');
+
+    function setDuration(sec) {
+      if (isRunning) return;
+      selectedDuration = sec;
+      timeLeft = sec;
+      
+      // Update UI buttons
+      document.querySelectorAll('.time-btn').forEach(btn => {
+        if (btn.innerText === `${sec}s`) {
+          btn.className = 'time-btn bg-emerald-600 text-white text-xl px-4 py-1.5 rounded border border-emerald-500 font-bold hover:bg-emerald-500 active:scale-95';
+        } else {
+          btn.className = 'time-btn bg-slate-800 text-slate-300 text-xl px-4 py-1.5 rounded border border-slate-700 font-bold hover:bg-slate-700 active:scale-95';
+        }
+      });
+
+      resetTest();
+    }
+
+    function resetTest() {
+      clearInterval(timer);
+      isRunning = false;
+      isFinished = false;
+      clickCount = 0;
+      timeLeft = selectedDuration;
+
+      timeDisplay.innerText = `${timeLeft.toFixed(1)}s`;
+      clicksDisplay.innerText = '0';
+      cpsDisplay.innerText = '0.0';
+
+      padIcon.innerText = '⚡';
+      padText.innerText = 'CLICK TO START';
+      padSubtext.innerText = 'Click as fast as you can!';
+      clickPad.className = 'click-area relative w-full h-64 sm:h-80 bg-slate-900 hover:bg-slate-800/80 border-4 border-emerald-600 rounded-2xl flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all duration-100 shadow-2xl';
+      resultCard.classList.add('hidden');
+    }
+
+    function startTest() {
+      isRunning = true;
+      padIcon.innerText = '🔥';
+      padText.innerText = 'KEEP CLICKING!';
+      padSubtext.innerText = 'Go! Go! Go!';
+      clickPad.classList.replace('border-emerald-600', 'border-amber-500');
+
+      const startTime = Date.now();
+      const endTime = startTime + (selectedDuration * 1000);
+
+      timer = setInterval(() => {
+        const now = Date.now();
+        const remaining = Math.max(0, (endTime - now) / 1000);
+        timeLeft = remaining;
+        timeDisplay.innerText = `${remaining.toFixed(1)}s`;
+
+        const elapsed = Math.max(0.001, (selectedDuration - remaining));
+        const currentCPS = (clickCount / elapsed).toFixed(1);
+        cpsDisplay.innerText = currentCPS;
+
+        if (remaining <= 0) {
+          endTest();
+        }
+      }, 50);
+    }
+
+    function endTest() {
+      clearInterval(timer);
+      isRunning = false;
+      isFinished = true;
+
+      const finalCPS = (clickCount / selectedDuration).toFixed(1);
+      timeDisplay.innerText = '0.0s';
+      cpsDisplay.innerText = finalCPS;
+
+      if (parseFloat(finalCPS) > peakCPS) {
+        peakCPS = parseFloat(finalCPS);
+        topScoreDisplay.innerText = `Peak CPS: ${peakCPS.toFixed(1)}`;
+      }
+
+      // Rank evaluation
+      let rank = "TURTLE 🐢";
+      let icon = "🐢";
+      if (finalCPS >= 12) { rank = "LIGHTNING SPEED! ⚡"; icon = "⚡"; }
+      else if (finalCPS >= 9) { rank = "CHEETAH SPEED! 🐆"; icon = "🐆"; }
+      else if (finalCPS >= 6) { rank = "RABBIT SPEED! 🐇"; icon = "🐇"; }
+      else if (finalCPS >= 3) { rank = "HUMAN SPEED! 🏃"; icon = "🏃"; }
+
+      document.getElementById('result-rank').innerText = rank;
+      document.getElementById('rank-badge').innerText = icon;
+      document.getElementById('result-summary').innerHTML = `You scored <span class="text-emerald-400 font-bold">${clickCount} Clicks</span> in <span class="text-sky-400 font-bold">${selectedDuration}s</span> (<span class="text-amber-400 font-bold">${finalCPS} CPS</span>)`;
+
+      padText.innerText = 'TEST COMPLETE!';
+      padSubtext.innerText = 'Check your score below!';
+      clickPad.classList.replace('border-amber-500', 'border-slate-700');
+      resultCard.classList.remove('hidden');
+    }
+
+    // Handle clicks
+    function handleClick(e) {
+      if (isFinished) return;
+
+      if (!isRunning) {
+        startTest();
+      }
+
+      clickCount++;
+      clicksDisplay.innerText = clickCount;
+
+      // Ripple animation
+      const rect = clickPad.getBoundingClientRect();
+      const ripple = document.createElement('div');
+      ripple.className = 'ripple-effect';
+      const size = 80;
+      const x = e.clientX ? (e.clientX - rect.left - size / 2) : (rect.width / 2 - size / 2);
+      const y = e.clientY ? (e.clientY - rect.top - size / 2) : (rect.height / 2 - size / 2);
+      
+      ripple.style.width = `${size}px`;
+      ripple.style.height = `${size}px`;
+      ripple.style.left = `${x}px`;
+      ripple.style.top = `${y}px`;
+      clickPad.appendChild(ripple);
+
+      setTimeout(() => ripple.remove(), 400);
+    }
+
+    clickPad.addEventListener('pointerdown', handleClick);
+  </script>
+</body>
+</html>
