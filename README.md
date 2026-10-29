@@ -1,2 +1,3 @@
-# Guess_IT
-A word guessing game
+CLICKSPEED.IO
+A GAME THAT TEST YOU CLICK SPEED
+
